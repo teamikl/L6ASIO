@@ -1,0 +1,190 @@
+==================================================
+ASIOコントロール・パネルを操作するモジュール開発の手順
+==================================================
+
+
+ ASIO のコントロール・パネルは、各ベンダー/プロダクト毎に異なります。
+ 
+ Line6 POD x3 以外の対応クラスを書く時のためのメモ。
+ 
+
+ 1. コントロール・パネルを開く方法を探す
+ 
+   1.1. コントロール・パネルやスタート・メニューにショートカットが作成されている場合、
+      
+      Line 6 POD x3 / win32 vista の場合、
+      
+      スタート・メニュー Line 6 -> Tools -> Line 6 Audio-MIDI Devices
+      があったので、これを右クリック-> プロパティ でリンク先を確認。
+      
+      これと同じ文字を、USWC の Exec 命令で呼び出します。
+      実際は、c:\Windows\System32 へは環境変数 PATH が設定されてる。
+      実行ファイルの拡張子 .exe は省略可能なので、
+      
+      リンク先 C:\Windows\system32\control.exe C:\Windows\system32\L6DriverControlPanel.cpl
+      
+      は、USWCから呼び出す場合
+      
+      Exec("control L6DriverControlPanel.cpl")
+      
+      となります。
+
+      リンク先そのままだと、64ビット環境で32ビット環境のファイルを参照してしまうので、
+      可能ならどちらにも対応できる記述にすると良いです。
+
+
+   1.2. どこにあるかわからない場合
+   
+      諦めます。とっても面倒です。
+      
+      => コントロール・パネルを開く部分をC++で記述する
+
+      ASIOのドライバは、レジストリにあるCOMのCLSID情報を参照し、
+      WindowsのCOMという仕組みで読み込まれます。
+      USWCはCOM操作をサポートしています。
+
+      アプローチとしては、通常のASIOドライバが読み込まれる手順通りに
+      進めるのですが、USWCのみでは問題に当たります。
+      
+      ASIO側の問題。
+        COM対応が中途半端で、COMクライアントから呼び出す為の
+        インターフェースがない。(ASIOのインターフェース規格自体の問題)
+        この為、COMなのにC++以外の他の言語から操作出来なくなってます。
+        
+      USWC側の問題。
+        レジストリ参照のサポートがない。
+        USWCのサンプルでは WScript を経由して参照しているが、この方法では、
+        レジストリのサブ・キーの一覧が所得出来ない、といった制限に突き当たる。
+
+
+      
+ 2. クラスの外郭を記述
+
+   適当なファイル名でファイルを作成し、コードを書き始めます。
+   
+ 
+   Class クラス名
+   
+     // コントロール
+     // ASIOドライバの設定画面を開くコマンドを調べて設定する
+     Const ControlPath = "control L6DriverControlPanel.cpl"
+   
+     Dim Handle
+
+     Function クラス名()
+       This.Handle = 0
+     FEnd
+     
+     // コントロール・パネルを開く
+     // ショートカットが見つかった場合は、上記の ControlPath の値を変更する。
+     // 下のOpen関数は、通常変更の必要なし。
+     
+     Function Open()
+       This.Handle = Exec(This.ControlPath)
+       Result = This.Handle
+     FEnd
+
+
+     // 以下、各種情報所得・変更の為のメソッドを定義する
+     // ...
+   
+   EndClass
+   
+   "クラス名" の所は、クラス識別の為の任意の名前を記述します。
+   Function の "クラス名"の箇所には、Class と同じ名前を記述します。
+
+
+ 3. 設定ダイアログのGUI部品を把握する為に、構造を書き出します。
+
+    Dialog (Line6 PODx3 のASIO設定の例)
+      Combo ドライバー
+      Tab "Driver"
+          Combo Default バッファー・サイズ
+          Combo Default ビット・レート
+          Slider バッファー
+      Tab "Inputs & Recording"
+          Slider モニター音量
+      Button Ok
+      Button Apply
+      Button Cancel
+
+
+   # Line6 PODx3のASIOドライバの設定ダイアログには、2つのタブがあり、
+   # タブ内のコントロールを操作する場合は、事前にタブを切り替えます。 @see SetTab
+
+  この情報を元にクラスのAPIを作成します。
+  
+ 
+ 4. ボタン・クリックのメソッドを追加
+ 
+   USWCのClkItem関数で、ラベルを指定してボタン・クリック操作を実行。
+
+   @see Ok(), Apply(), Cancel()
+
+
+ 5. 設定所得・変更のメソッドを追加
+
+   設定項目１つに対して、以下ような名前の関数群を作ります。
+   
+   情報所得系の関数は GetXXX
+   設定変更系の関数は SetXXX, SelectXXX 等
+
+
+   例) モニター音量のスライダーに対応するGet/Setメソッドを作成
+
+   // 通し番号の定数を定義します。
+   // 上から順に番号が振られているはずですが、
+   // タブ内に有る場合は、「画面に表示されている」順序なので
+   // 別のタブ内のコントロールと番号が重複する事もあります。
+   
+   Const IDX_MONITOR_SLIDER = 1
+
+   Function GetMonitorVolume()
+     // Get系のメソッドは、値を返すので Result = のようにします。
+     Result = GetSlider(This.Handle, This.IDX_MONITOR_SLIDER, SLD_POS)
+   FEnd
+
+   Function SetMonitorVolume(value)
+     // Set系のメソッドは、引数をとるので (value) とパラメータを受け取れるようにします。
+     SetSlider(This.Handle, value, This.IDX_MONITOR_SLIDER, SLD_POS)
+   FEnd
+
+
+  各コントロールの識別には、ラベルやインデックス(通し番号)を使うのですが、
+  通し番号で指定する場合に、プログラム中にその数値を直接書くと、
+  何の値か後から解らなくなることがあるので、
+  Const IDX_XXX = 1 のように頭の方で定数として定義し、This.IDX_XXX として参照します。
+  必須では有りませんが、保守時にプログラムが読みやすくなります。
+  
+----
+
+CLKITEM関数 http://canal22.org/kansu/clkitem/
+GETITEM関数 http://canal22.org/kansu/getitem/
+
+ボタンのクリック
+
+  ClkItem(This.Handle, "ボタンのラベル")
+
+タブの切り替え
+
+  ClkItem(This.Handle, "タブのラベル", CLK_TAB)
+
+リストボックスの選択中の項目を得る
+
+  Result = GetSlctLst(This.Handle, 番号)
+
+リストボックスの項目を選択
+
+  ClkItem(This.Handle, "選択する項目", CLK_LIST, 0, 番号)
+
+スライダーの値を得る
+
+  Result = GetSlider(This.Handle, 番号, SLD_POS)
+
+スライダーの値を設定
+
+  SetSlider(This.Handle, 値, 番号, SLD_POS)
+
+
+TODO: チェックボックスの例 CHKBTN/CLKITEM
+TODO: 他のコントロールの操作例

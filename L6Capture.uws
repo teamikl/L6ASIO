@@ -1,0 +1,14 @@
+
+Call "L6ASIO"
+
+If L6DriverControlPanel.Open() Then
+
+  L6DriverControlPanel.SetTab("Driver")
+  Sleep(1)
+  SaveImg("01.jpg", Handle, 0, 0, 562, 564, True, 50)
+
+  L6DriverControlPanel.SetTab("Inputs & Recording")
+  Sleep(1)
+  SaveImg("02.jpg", Handle, 0, 0, 562, 564, True, 50)
+
+EndIf

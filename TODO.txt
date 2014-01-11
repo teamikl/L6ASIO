@@ -1,0 +1,6 @@
+
+PODx3/XP had "Driver Formats"
+
+  * Default Sample rate (ComboBox)
+  * Default Bits rate (ComboBox)
+  * Lock Format (CheckBox)

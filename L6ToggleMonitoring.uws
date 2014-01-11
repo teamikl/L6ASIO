@@ -1,0 +1,24 @@
+// Toggle direct monitoring level
+
+Call "L6ASIO"
+
+If L6DriverControlPanel.Open() Then
+
+   L6DriverControlPanel.SelectDriver("Line 6 POD X3 Pro")
+   
+   Dim value = L6DriverControlPanel.GetDirectMonitorLevel()
+   Dim maxValue = L6DriverControlPanel.GetDirectMonitorLevel(SLD_MAX)
+   Dim minValue = L6DriverControlPanel.GetDirectMonitorLevel(SLD_MIN)
+   
+   If value = maxValue Then
+     value = minValue
+   ElseIf value = minValue Then
+     value = maxValue
+   Else
+     value = value
+   EndIf
+   
+   L6DriverControlPanel.SetDirectMonitorLevel(value)
+   L6DriverControlPanel.Apply()
+   
+EndIf

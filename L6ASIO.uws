@@ -1,0 +1,147 @@
+/// @file L6ASIO.uws
+/// @brief Line6 ASIO ControlPanel library
+/// @author tea <Ikkei.Shimomura [at] gmail.com>
+/// @version 1.0.0
+/// @since 2013/09/10
+/// @date 2014/01/11
+///
+/// * Tested only l6podx3pro.dll driver/win32 vista
+///
+
+Option Explicit
+
+Class L6DriverControlPanel
+
+  Const ControlPath = "control L6DriverControlPanel.cpl"
+  
+  Const IDX_DRIVER_COMBO = 1
+  Const IDX_BUFFER_COMBO = 2
+  Const IDX_BITS_COMBO = 3
+  Const IDX_BUFFER_SLIDER = 1
+  Const IDX_MONITOR_SLIDER = 1
+  Const IDX_ROUTING_LIST = 2
+  Const TAB_DRIVER = "Driver"
+  Const TAB_INPUT = "Inputs & Recording"
+  
+  Dim Handle
+
+  Procedure L6DriverControlPanel
+    This.Handle = 0
+  FEnd
+
+  Function Open()
+    This.Handle = Exec(This.ControlPath)
+    Result = This.Handle
+  FEnd
+  
+  Procedure SetTab(tab)
+    ClkItem(This.Handle, tab, CLK_TAB)
+  FEnd
+  
+  Function GetCurrentDriver()
+    Result = GetSlctLst(This.Handle, This.IDX_DRIVER_COMBO)
+  FEnd
+  
+  Function SelectDriver(driverName)
+    Result = ClkItem(This.Handle, driverName, CLK_LIST, 0, This.IDX_DRIVER_COMBO)
+  FEnd
+  
+  Function GetClientDefaultBufferSize()
+    SetTab(This.TAB_DRIVER)
+    Result = GetSlctLst(This.Handle, This.IDX_BUFFER_COMBO)
+  FEnd
+  
+  Function SetClientDefaultBufferSize(size)
+    SetTab(This.TAB_DRIVER)
+    Result = ClkItem(This.Handle, size, CLK_LIST, 0, This.IDX_BUFFER_COMBO)
+  FEnd
+  
+  Function GetClientDefaultBitsDepth()
+    SetTab(This.TAB_DRIVER)
+    Result = GetSlctLst(This.Handle, This.IDX_BITS_COMBO)
+  FEnd
+
+  Function SetClientDefaultBitsDepth(depth)
+    SetTab(This.TAB_DRIVER)
+    Result = ClkItem(This.Handle, depth, CLK_LIST, 0, This.IDX_BITS_COMBO)
+  FEnd
+  
+  Function GetUSBStreamingBufferSize(type=SLD_POS)
+    SetTab(This.TAB_DRIVER)
+    Result = GetSlider(This.Handle, This.IDX_BUFFER_SLIDER, type)
+  FEnd
+  
+  Function SetUSBStreamingBufferSize(idx)
+    SetTab(This.TAB_DRIVER)
+    Result = SetSlider(This.Handle, idx, This.IDX_BUFFER_SLIDER)
+  FEnd
+  
+  Function GetDirectMonitorLevel(type=SLD_POS)
+    SetTab(This.TAB_INPUT)
+    Result = GetSlider(This.Handle, This.IDX_MONITOR_SLIDER, type)
+  FEnd
+
+  Function SetDirectMonitorLevel(level)
+    SetTab(This.TAB_INPUT)
+    Result = SetSlider(This.Handle, level, This.IDX_MONITOR_SLIDER)
+  FEnd
+  
+  // XXX: Not tested in X3Pro
+  Function GetAudioSignalRouting()
+    SetTab(This.TAB_INPUT)
+    Result = GetSlctLst(This.Handle, This.IDX_ROUTING_LIST)
+  FEnd
+  
+  // XXX: Not Tested in X3Pro
+  Function SetAudioSignalRouting(item)
+    SetTab(This.TAB_INPUT)
+    Result = ClkItem(This.Handle, item, CLK_LIST, 0, This.IDX_ROUTING_LIST)
+  FEnd
+  
+  Procedure SetParams(driverName="", clientBuffer=-1, clientBits=-1, usbBuffer=-1, routing=-1, monitorLevel=-1)
+    If driverName > 0 Then
+      This.SelectDriver(driverName)
+    EndIf
+    
+    If clientBuffer >= 0 Then
+      This.SetClientDefaultBufferSize(clientBuffer)
+    EndIf
+    
+    If clientBits >= 0 Then
+      This.SetClientDefaultBitsDepth(clientBits + " bit")
+    EndIf
+    
+    If usbBuffer >= 0 Then
+      This.SetUSBStreamingBufferSize(usbBuffer)
+    EndIf
+    
+    If routing >= 0 Then
+      This.SetAudioSignalRouting(routing)
+    EndIf
+    
+    If monitorLevel >= 0 Then
+      This.SetDirectMonitorLevel(monitorLevel)
+    EndIf
+  FEnd
+  
+  Function OK()
+    Result = ClkItem(This.Handle, "OK")
+  FEnd
+  
+  Function Cancel()
+    Result = ClkItem(This.Handle, "Cancel")
+  FEnd
+  
+  Function Apply()
+    Result = ClkItem(This.Handle, "Apply")
+  FEnd
+
+EndClass
+
+
+Procedure L6ASIO_SetParams(driverName="", clientBuffer=-1, clientBits=-1, usbBuffer=-1, routing=-1, monitorLevel=-1)
+  If L6DriverControlPanel.Open() Then
+    L6DriverControlPanel.SetParams(driverName, clientBuffer, clientBits, usbBuffer, routing, monitorLevel)
+    L6DriverControlPanel.OK()
+  EndIf
+FEnd

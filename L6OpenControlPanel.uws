@@ -1,0 +1,7 @@
+Call "L6ASIO"
+
+If L6DriverControlPanel.Open() Then
+
+  // Do something
+  
+EndIf

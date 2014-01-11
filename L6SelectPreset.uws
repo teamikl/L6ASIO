@@ -1,0 +1,36 @@
+Option Explicit
+
+//
+// Preset Menu
+//
+
+//// User Settings
+
+HashTbl Preset
+Preset["NINJAM"] = "Line 6 POD X3 Pro,256,16,-1,-1,100"
+Preset["Ohm Studio"] = "0,-1,-1,-1,-1,0"
+Preset["Input Monitoring"] = "0,-1,-1,-1,-1,0"
+Preset["Direct Monitoring"] = "0,-1,-1,-1,-1,100"
+
+
+////
+
+Call "L6ASIO"
+
+Dim i
+Dim MenuKeys[32]
+For i = 0 To Length(Preset)-1
+  MenuKeys[i] = Preset[i, HASH_KEY]
+Next
+
+Dim x = SlctBox(SLCT_CMB, 0, "Select Preset", MenuKeys)
+
+If x > 0 Then
+  Dim xs = Split(Preset[x-1, HASH_VAL], ",")
+  
+  If Length(xs) = 6 Then
+    L6ASIO_SetParams(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5])
+  Else
+    MsgBox("Params must be 6 columns")
+  EndIf
+EndIf
